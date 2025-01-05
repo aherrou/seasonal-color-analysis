@@ -23,14 +23,6 @@ Scalar avg_color(Mat &img, const std::vector<Point>& contour)
   Mat mask = Mat::zeros(img.size(), CV_8UC1);
   fillPoly(mask, contour, Scalar(255, 255, 255));
 
-  // display the mask to check that it is correct
-  // imshow("Mask", mask);
-  // waitKey(0);
-  
-  // convert in HSV
-  /* Mat img_hsv;
-     cvtColor(img, img_hsv, COLOR_BGR2HSV); */
-
   // average color inside the bounding box
   Scalar avg_bb = mean(img, mask);
   std::cout << "Average color of the bbox = \t" << avg_bb << std::endl;
@@ -43,14 +35,6 @@ Scalar avg_color(Mat &img, const std::vector<std::vector<Point>>& contour)
 {
   Mat mask = Mat::zeros(img.size(), CV_8UC1);
   fillPoly(mask, contour, Scalar(255, 255, 255));
-
-  // display the mask to check that it is correct
-  // imshow("Mask", mask);
-  // waitKey(0);
-  
-  // convert in HSV
-  /* Mat img_hsv;
-     cvtColor(img, img_hsv, COLOR_BGR2HSV); */
 
   // average color inside the bounding box
   Scalar avg_bb = mean(img, mask);
@@ -137,12 +121,6 @@ void contours(const Mat &img, int thr)
   // thresholding necessitates a monochrome image
    Mat gray;
   cvtColor(img, gray, COLOR_BGR2GRAY); 
-
-  /* Mat img_hsv;
-  cvtColor(img, img_hsv, COLOR_BGR2HSV);
-  // use only one channel 
-  Mat channels[3];
-  split(img_hsv, channels); */
 
   std::cout << "Finding contours for threshold " << thr << std::endl;
 
@@ -393,14 +371,6 @@ int main(int argc, char** argv)
   face_wo_features.push_back({});
   for (int i=59; i >= 48; i--) // mouth
     face_wo_features[3].push_back(landmarks[0][i]); 
-
-  /* polylines(img,
-	    face_wo_features,
-	    true,
-	    Scalar(255, 200, 0),
-	    2,
-	    LINE_AA); */
-
 	    
   std::cout << "Computing the average color of the face" << std::endl;
   Scalar avg_face = avg_color(img, face_wo_features);
@@ -416,42 +386,12 @@ int main(int argc, char** argv)
   histogram(img, face_wo_features, hbins, sbins, vbins, 0);
   histogram(img, {right_pupil_contour}, hbins, sbins, vbins, 1);  
   
-  /* namedWindow( "H-S Histogram", 1 );
-  imshow( "H-S Histogram", histImg );
-
-  waitKey(0); */
-  
   /*
     Display of the result
   */
 
-  // Mat res = temp | temp2;
-
-  /* Mat img_hsv;
-  cvtColor(img, img_hsv, COLOR_BGR2HSV);
-  Mat channels[3];
-  split(img_hsv, channels);*/
-
-  // for (int i=0; i<255; i+=10){
-  //  int i = 2;
-  // Mat img_contours = img.clone();
-  // Mat img_contours; cvtColor(img, img_contours, COLOR_BGR2GRAY);
-
-  int thr = 100;
-  // contours(img, thr);
-  // threshold(img_contours, img_contours, i, i*2, THRESH_BINARY | THRESH_OTSU); 
-
-  /* std::string txt = std::to_string(thr);
-  cv::Scalar color = Scalar(255, 255, 255) - avg_left_pupil;
-  Size textsize = getTextSize(txt, FONT_HERSHEY_SIMPLEX, 1, 1, 0);
-  int vPos = (int)(1.3 * textsize.height);
-  Point org((img.cols - textsize.width), vPos);
-  putText(img, txt, org, FONT_HERSHEY_SIMPLEX, 1, color, 1, LINE_8);*/
-  
-  // imshow("result", channels[1]);
   imshow("res", img);
   waitKey(0);
-  // }
     
   return 0;
 }
