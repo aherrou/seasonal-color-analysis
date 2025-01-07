@@ -17,6 +17,14 @@
 using namespace cv;
 using namespace cv::face;
 
+// face parts
+
+enum class FacePart {
+  FACE,
+  EYES,
+  MOUTH
+};
+
 // Computes the average color of a zone delimited by landmarks
 Scalar avg_color(Mat &img, const std::vector<Point>& contour)
 {
@@ -178,80 +186,140 @@ Scalar convert_color(Scalar source_col, int mode)
 void histogram(
 	       Mat &img, const std::vector<std::vector<Point>>& contour,
 	       int hbins, int sbins, int vbins, // hue, saturation, value bins
-	       int i // number of the histogram we draw (for positioning)
+	       int i, // number of the histogram we draw (for positioning)
+	       std::string label,
+	       FacePart fp = FacePart::FACE
 	       )
 {
-    MatND hist;
+  /*
+    Compute the color histogram of the face region
+    
+    Mostly lifted from the docs https://docs.opencv.org/4.x/d6/dc7/group__imgproc__hist.html#ga4b2b5fd75503ff9e6844cc4dcdaed35d
+  */
+  
+  MatND hist;
+  
+  int histSize[] = {hbins, sbins};
+  // hue varies from 0 to 179, see cvtColor
 
-    int histSize[] = {hbins, sbins};
-    // hue varies from 0 to 179, see cvtColor
-    float hranges[] = { 0, 180 };
-    // saturation varies from 0 (black-gray-white) to 255 (pure spectrum color)
-    float sranges[] = { 0, 256 };
-    // value varies from 0 to 255 if I'm reading the docs correctly
-    float vranges[] = {0, 256};
-    const float* ranges[] = { hranges, sranges };
+  // differentiated between face parts 
+  float hmax;
+  if (fp == FacePart::FACE){
+    hmax = 30;   // [0; 60] are the yellow-orange-red hues aka skin tones
+    std::cout << "Displaying the face histogram" << std::endl;
+  }
+  else
+    hmax = 180;
+  
+  float hranges[] = { 0, hmax };
+  // saturation varies from 0 (black-gray-white) to 255 (pure spectrum color)
+  float sranges[] = { 0, 256 };
+  // value varies from 0 to 255 if I'm reading the docs correctly
+  float vranges[] = {0, 256};
+  const float* ranges[] = { hranges, sranges };
+  
+  int scale = 10; // how magnified histogram bins are
+  
+  // second border if the image is not tall enough to accomodate two histograms
+  // warning: this assumes that all histograms have the same number of bins
+  if (img.rows < (sbins+1)*scale*(i+1) or i == 0)
+    {
+      copyMakeBorder(img, img, 0, 0, 0, (hbins+1)*scale, BORDER_CONSTANT,
+		     Scalar(255, 255, 255)
+		     );
+    }
+  
+  Mat mask = Mat::zeros(img.size(), CV_8UC1);
+  fillPoly(mask, contour, Scalar(255, 255, 255));
+  
+  int channels[] = {0, 1, 2};
+  
+  Mat img_hsv;
+  cvtColor(img, img_hsv, COLOR_BGR2HSV);
+  
+  calcHist(&img_hsv, // image(s)
+	   1, // number of images
+	   channels, mask, // mask
+	   hist, 2, histSize, ranges,
+	   true,  // the histogram is uniform, whatever that means
+	   false); // clear the histogram at the beginning of the computation
+  
+  double maxVal=0;
+  minMaxLoc(hist, 0, &maxVal, 0, 0);
 
-    int scale = 10; // how magnified histogram bins are
-
-    // second border if the image is not tall enough to accomodate two histograms
-    if (img.rows < sbins*scale*(i+1) or i == 0)
-      {
-	copyMakeBorder(img, img, 0, 0, 0, hbins*scale, BORDER_CONSTANT,
-		       Scalar(255, 255, 255)
-		       );
+  Size textsize  = getTextSize(label, FONT_HERSHEY_SIMPLEX, 1, 1, 0);
+  
+  Mat histImg = Mat::zeros((sbins + 1)*scale + textsize.height, (hbins+1)*scale, CV_8UC3);
+  
+  for( int h = 0; h < hbins; h++ )
+    for( int s = 0; s < sbins; s++ )
+      {	
+	float binVal = hist.at<float>(h, s);
+	int intensity = cvRound(binVal*255/maxVal);
+	
+	Scalar hsv_col(cvRound(h*hranges[1]/hbins),
+		       cvRound(s*sranges[1]/sbins),
+		       // 255,
+		       intensity);
+	Scalar bgr_col = convert_color(hsv_col, COLOR_HSV2BGR);
+	// cvtColor(hsv_col, bgr_col, COLOR_HSV2BGR);
+	
+	rectangle( histImg, Point(h*scale, s*scale),
+		   Point( (h+1)*scale - 1, (s+1)*scale - 1),
+		   bgr_col,
+		   -1 );
       }
 
-    Mat mask = Mat::zeros(img.size(), CV_8UC1);
-    fillPoly(mask, contour, Scalar(255, 255, 255));
-    
-    int channels[] = {0, 1, 2};
-    
-    Mat img_hsv;
-    cvtColor(img, img_hsv, COLOR_BGR2HSV);
-    
-    calcHist(&img_hsv, // image(s)
-	     1, // number of images
-	     channels, mask, // mask
-	     hist, 2, histSize, ranges,
-	     true,  // the histogram is uniform, whatever that means
-	     false); // clear the histogram at the beginning of the computation
-    
-    double maxVal=0;
-    minMaxLoc(hist, 0, &maxVal, 0, 0);
-    
-    Mat histImg = Mat::zeros(sbins*scale, hbins*scale, CV_8UC3);
-    
-    for( int h = 0; h < hbins; h++ )
-      for( int s = 0; s < sbins; s++ )
-	{	
-	  float binVal = hist.at<float>(h, s);
-	  int intensity = cvRound(binVal*255/maxVal);
-	  
-	  Scalar hsv_col(cvRound(h*180/hbins),
-			 cvRound(s*255/sbins),
-			 intensity);
-	  Scalar bgr_col = convert_color(hsv_col, COLOR_HSV2BGR);
-	  // cvtColor(hsv_col, bgr_col, COLOR_HSV2BGR);
-	  
-	  rectangle( histImg, Point(h*scale, s*scale),
-		     Point( (h+1)*scale - 1, (s+1)*scale - 1),
-		     // Scalar::all(intensity),
-		     bgr_col,
-		     // hsv_col,
-		     -1 );
-	}
+  // Display the legend
 
-    // Paste the histogram onto the image
+  // hue
+  for (int h=0; h<hbins; h++)
+    {
+      Scalar hsv_col(
+		     cvRound(h*hranges[1]/hbins),
+		     255,
+		     255
+		     );
+	Scalar bgr_col = convert_color(hsv_col, COLOR_HSV2BGR);
+	// cvtColor(hsv_col, bgr_col, COLOR_HSV2BGR);
+	
+	rectangle( histImg, Point(h*scale, sbins*scale),
+		   Point( (h+1)*scale - 1, (sbins+1)*scale - 1),
+		   bgr_col,
+		   -1 );
+    }
 
-    Rect pos(img.cols - histImg.cols, img.rows - histImg.rows,
-		 histImg.cols, histImg.rows);
-    // if there is already a histogram and we have space to stack the histogram above it
-    if (i > 0 and img.rows >= sbins*scale*(i+1))
-      pos = Rect(img.cols - histImg.cols, img.rows - (i+1)*histImg.rows,
+  // saturation
+  for (int s=0; s<sbins; s++)
+    {
+      Scalar hsv_col(
+		     60,
+		     cvRound(s*sranges[1]/sbins),
+		     255
+		     );
+	Scalar bgr_col = convert_color(hsv_col, COLOR_HSV2BGR);
+	// cvtColor(hsv_col, bgr_col, COLOR_HSV2BGR);
+	
+	rectangle( histImg, Point(hbins*scale, s*scale),
+		   Point( (hbins+1)*scale - 1, (s+1)*scale - 1),
+		   bgr_col,
+		   -1 );
+    }
+
+  // label
+  Point pos_txt(0, histImg.rows - 5);
+  putText(histImg, label, pos_txt, FONT_HERSHEY_SIMPLEX, 0.5, Scalar::all(255), 1, LINE_8);
+
+  // Paste the histogram onto the image
+  
+  Rect pos(img.cols - histImg.cols, img.rows - histImg.rows,
+	   histImg.cols, histImg.rows);
+  // if there is already a histogram and we have space to stack the histogram above it
+  if (i > 0 and img.rows >= histImg.rows*(i+1))
+    pos = Rect(img.cols - histImg.cols, img.rows - (i+1)*histImg.rows,
 	       histImg.cols, histImg.rows);
-    
-    histImg.copyTo(img(pos));
+  
+  histImg.copyTo(img(pos));
 }
 
 int main(int argc, char** argv)
@@ -376,15 +444,9 @@ int main(int argc, char** argv)
   Scalar avg_face = avg_color(img, face_wo_features);
   print_color(img, avg_face, 2, "Face");
 
-  /*
-    Compute the color histogram of the face region
-
-    Mostly lifted from the docs https://docs.opencv.org/4.x/d6/dc7/group__imgproc__hist.html#ga4b2b5fd75503ff9e6844cc4dcdaed35d
-  */
-
   // we first try with a pure skin mask
-  histogram(img, face_wo_features, hbins, sbins, vbins, 0);
-  histogram(img, {right_pupil_contour}, hbins, sbins, vbins, 1);  
+  histogram(img, face_wo_features, hbins, sbins, vbins, 0, "Face", FacePart::FACE);
+  histogram(img, {right_pupil_contour}, hbins, sbins, vbins, 1, "Eyes", FacePart::EYES);  
   
   /*
     Display of the result
