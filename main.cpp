@@ -31,9 +31,11 @@ Scalar avg_color(Mat &img, const std::vector<Point>& contour)
   Mat mask = Mat::zeros(img.size(), CV_8UC1);
   fillPoly(mask, contour, Scalar(255, 255, 255));
 
+  // polylines(img, contour, true, Scalar(255, 255, 0), 1);
+  
   // average color inside the bounding box
   Scalar avg_bb = mean(img, mask);
-  std::cout << "Average color of the bbox = \t" << avg_bb << std::endl;
+  // std::cout << "Average color of the bbox = \t" << avg_bb << std::endl;
   
   return avg_bb;
 }
@@ -44,9 +46,11 @@ Scalar avg_color(Mat &img, const std::vector<std::vector<Point>>& contour)
   Mat mask = Mat::zeros(img.size(), CV_8UC1);
   fillPoly(mask, contour, Scalar(255, 255, 255));
 
+  // polylines(img, contour, true, Scalar(255, 255, 0), 1);
+
   // average color inside the bounding box
   Scalar avg_bb = mean(img, mask);
-  std::cout << "Average color of the bbox = \t" << avg_bb << std::endl;
+  // std::cout << "Average color of the bbox = \t" << avg_bb << std::endl;
   
   return avg_bb;
 }
@@ -60,10 +64,10 @@ Scalar correct_eye_color(Scalar avg_bb)
   Scalar avg = (9/2)*(avg_bb - whitep - blackp)/CV_PI; // correction with the pupil
   Scalar avg2 = 4*(avg_bb - whitep)/CV_PI; // correction without the pupil 
   
-  std::cout << "Average color of the bbox = \t" << avg_bb << std::endl;
+  /* std::cout << "Average color of the bbox = \t" << avg_bb << std::endl;
   std::cout << "Contribution of white = \t" << whitep << std::endl;
   std::cout << "Contribution of black = \t" << blackp << std::endl;
-  std::cout << "Actual color of the iris = \t" << avg << std::endl;
+  std::cout << "Actual color of the iris = \t" << avg << std::endl; */
 
   // draw these colors on the image for checking
   /* std::vector<Point> avg_color_contour = {Point(0, 0), Point(0, 40), Point(40, 40), Point(40, 0)};
@@ -84,7 +88,7 @@ void print_color(Mat &img, Scalar c, int height, std::string label)
 {
   Size textsize = getTextSize(label, FONT_HERSHEY_SIMPLEX, 1, 1, 0);
   Point pos_txt((img.cols - 120), height*40 + 30);
-  std::cout << "The text has a width of " << std::endl;
+
   putText(img, label, pos_txt, FONT_HERSHEY_SIMPLEX, 80/(float)textsize.width, Scalar(0, 0, 0), 1, LINE_8);
   
   std::vector<Point> contour = {Point(img.cols-40, height*40),
@@ -127,7 +131,7 @@ bool get_landmarks(const Mat &img, std::vector<std::vector<Point2f>> &landmarks)
 void contours(const Mat &img, int thr)
 {
   // thresholding necessitates a monochrome image
-   Mat gray;
+  Mat gray;
   cvtColor(img, gray, COLOR_BGR2GRAY); 
 
   std::cout << "Finding contours for threshold " << thr << std::endl;
