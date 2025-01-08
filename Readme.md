@@ -9,6 +9,18 @@ This project is implemented using [OpenCV](https://opencv.org/). Build it with `
 
 The project can be built by simply runnig `make`. 
 
+## Usage
+
+**Warning:** this program assumes that the picture provided has been taken in neutral (natural) lighting, 
+with uniform exposure all over the face and minimal reflexion on the iris of the eye.
+
+Two options are available: using a locally saved picture or taking a picture from the camera.
+
+To compute the color analysis of a picture taken from the webcam, just run `./face`.
+A webcam window will open, press Esc when the picture is satisfying. 
+
+To use a file, run `./face -f <file>`.
+
 ## Roadmap
 
 - [x] Detect faces and segment them in skin, eyes, mouth
