@@ -192,7 +192,9 @@ void histogram(
 	       int hbins, int sbins, int vbins, // hue, saturation, value bins
 	       int i, // number of the histogram we draw (for positioning)
 	       std::string label,
-	       FacePart fp = FacePart::FACE
+	       FacePart fp = FacePart::FACE,
+	       bool save = false,
+	       std::string path = "."
 	       )
 {
   /*
@@ -324,6 +326,14 @@ void histogram(
 	       histImg.cols, histImg.rows);
   
   histImg.copyTo(img(pos));
+
+  // save the histogram?
+  if (save)
+    {
+      bool success = imwrite(path+label+".png", histImg);
+      if (success) std::cout << "Wrote image" << std::endl;
+      else std::cout << "Fail" << std::endl;
+    }
 }
 
 int main(int argc, char** argv)
@@ -334,6 +344,7 @@ int main(int argc, char** argv)
    */
 
   bool webcam = true; // if false, use an already existing image
+  bool save = true; // save the histogram?
   int c;
 
   while ((c = getopt (argc, argv, "f:")) != -1)
@@ -342,6 +353,9 @@ int main(int argc, char** argv)
       case 'f':
         webcam = false;
         break;
+	/* case 's':
+	save = true;
+	break; */
       case '?':
         if (optopt == 'f')
           fprintf (stderr, "Option -%c requires an argument.\n", optopt);
@@ -355,6 +369,8 @@ int main(int argc, char** argv)
       default:
         abort ();
       }
+
+  //  if (save) std::cout << "Save the histograms" << std::endl;
   
   Mat img;
 
@@ -449,8 +465,8 @@ int main(int argc, char** argv)
   print_color(img, avg_face, 2, "Face");
 
   // we first try with a pure skin mask
-  histogram(img, face_wo_features, hbins, sbins, vbins, 0, "Face", FacePart::FACE);
-  histogram(img, {right_pupil_contour}, hbins, sbins, vbins, 1, "Eyes", FacePart::EYES);  
+  histogram(img, face_wo_features, hbins, sbins, vbins, 0, "Face", FacePart::FACE, true, "./hists/");
+  // histogram(img, {right_pupil_contour}, hbins, sbins, vbins, 1, "Eyes", FacePart::EYES);  
   
   /*
     Display of the result
